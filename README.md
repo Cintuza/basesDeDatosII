@@ -1,5 +1,5 @@
 - Para clonar el repositorio usar el siguiente enlace:
-https://github.com/Cintuza/basesDeDatosII
+https://github.com/Cintuza/basesDeDatosII.git
 
 - El mismo se encuentra escrito en Python 3 y no es necesario instalar otras dependencias.
 

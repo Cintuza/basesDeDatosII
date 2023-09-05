@@ -1,9 +1,8 @@
 
-from MaquinaVirtual import MaquinaVirtual
-
 class Compilador:
 
-    maquinaVirtual = MaquinaVirtual()
+    def __init__(self, maquinaVirtual):
+        self.maquinaVirtual = maquinaVirtual
 
     ## Si la query empieza con un punto (.) le pide a la maquina virtual que
     ## ejecute la query como un metacomando. Caso contrario le pide a la 

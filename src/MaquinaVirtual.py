@@ -24,8 +24,9 @@ class MaquinaVirtual:
             print("Inválido")
    
     def registroEsValido(self, registro):
-        cantidadElementosRegistro = len(registro.split(" "))
-        if cantidadElementosRegistro == 3:
+        elementosDelRegistro = registro.split(" ")
+        cantidadElementosRegistro = len(elementosDelRegistro)
+        if (cantidadElementosRegistro == 3) and (elementosDelRegistro[0].isnumeric()):
             return True
         else:
             return False

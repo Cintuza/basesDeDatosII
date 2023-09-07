@@ -15,19 +15,28 @@ class MaquinaVirtual:
             print(query + " no es un comando valido")
 
     def ejecutarSentenciaSQL(self, query):
-        if query.lower().startswith("select"):
+        if query.lower() == "select":
             print(self.obtenerTodosLosRegistrosDeserializados())
-            print(self.tabla.cantidadDeRegistrosGuardados())
-            print(len(self.tabla.paginas))
         elif query.lower().startswith("insert"):
             registro = query[7:]
             self.insertarRegistro(registro)
         else:
-            print(query + " no es una sentencia valida")
+            print("Inválido")
+   
+    def registroEsValido(self, registro):
+        cantidadElementosRegistro = len(registro.split(" "))
+        if cantidadElementosRegistro == 3:
+            return True
+        else:
+            return False
 
     def insertarRegistro(self, registro):
-        registroSerializado = self.serializar(registro)
-        self.tabla.guardarRegistroEnPagina(registroSerializado)
+        if self.registroEsValido(registro):
+            registroSerializado = self.serializar(registro)
+            self.tabla.guardarRegistroEnPagina(registroSerializado)
+            print("INSERT exitoso")
+        else:
+            print("Operación inválida")
 
     # 
     def serializar(self, registro):

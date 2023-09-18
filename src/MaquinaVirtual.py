@@ -7,10 +7,11 @@ class MaquinaVirtual:
     
     def ejecutarMetacomando(self, query):
         if query == ".exit":
+            self.tabla.guardarRegistrosEnBaseDeDatos()
             print("Terminado")
             exit()
         elif query == ".table-metadata":
-            print("Paginas: " + str(len(self.tabla.paginas)) + "\n" + "Registros: " + str(self.tabla.cantidadDeRegistrosGuardados()))
+            print("Paginas: " + str(self.tabla.cantPaginasBaseDeDatos()) + "\n" + "Registros: " + str(self.tabla.cantidadDeRegistrosGuardados()))
         else:
             print(query + " no es un comando valido")
 
@@ -33,7 +34,7 @@ class MaquinaVirtual:
 
     def insertarRegistro(self, registro):
         if self.registroEsValido(registro):
-            self.tabla.guardarRegistroEnPagina(registro)
+            self.tabla.guardarRegistroEnCache(registro)
             print("INSERT exitoso")
         else:
             print("Operación inválida")

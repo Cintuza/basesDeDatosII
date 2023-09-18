@@ -1,39 +1,68 @@
 from src.Pagina import Pagina
+from src.Paginador import Paginador
 
 class Tabla:
 
-    paginas = []
+    def __init__(self, paginador):
+        self.paginas = []
+        self.paginador = paginador
 
-    def ultimaPagina(self):
-        return self.paginas[-1]
+    def ultimaPaginaEscrita(self):
+        if len(self.paginador.cache) == 0:
+            return self.cantPaginasBaseDeDatos()
+        else:
+            return max(self.paginador.cache.keys())
 
     def paginaAEscribir(self):
-        if (len(self.paginas) == 0) or (self.ultimaPagina().estaCompleta()):
-            paginaNueva = Pagina()
-            self.paginas.append(paginaNueva)
-            return paginaNueva
+        if len(self.obtenerTodosLosRegistros()) % 14 == 0:
+            return self.ultimaPaginaEscrita() + 1
         else:
-            return self.ultimaPagina()
+            return self.ultimaPaginaEscrita()
         
-    def guardarRegistroEnPagina(self, registro):
+    def guardarRegistroEnCache(self, registro):
         registroSerializado = self.serializar(registro)
-        pagina = self.paginaAEscribir()
-        pagina.guardarRegistro(registroSerializado)
+        numPagina = self.paginador.obtenerPagina(self.paginaAEscribir())
+        self.paginador.cache[numPagina] += registroSerializado
+        if len(self.paginador.cache[numPagina]) == 4074:
+            self.paginador.cache[numPagina] += b"\00"*22
 
     def cantidadDeRegistrosGuardados(self):
-        if len(self.paginas) == 0:
-            return 0
+        tamanioBaseDatos = self.paginador.tamanioBaseDatos
+        if (tamanioBaseDatos % 4096 == 0):
+            return self.cantPaginasBaseDeDatos() * 14
         else:
-            paginasCompletas = len(self.paginas) - 1
-            cantidadRegistrosUltimaPagina = self.ultimaPagina().cantidadDeRegistrosGuardados()
-            return (paginasCompletas * 14) + cantidadRegistrosUltimaPagina
+            return int(tamanioBaseDatos / 4096) * 14 + int((tamanioBaseDatos % 4096) / 291)
+        
+    def guardarRegistrosEnBaseDeDatos(self):
+        if self.cantPaginasBaseDeDatos() <= self.ultimaPaginaEscrita():
+            paginas = []
+            with open(self.paginador.direccionBaseDatos, "ab+") as baseDeDatos:
+                posicion = 4096 * max((self.cantPaginasBaseDeDatos() - 1), 0)
+                baseDeDatos.truncate(posicion)
+                for numPagina in range(self.cantPaginasBaseDeDatos(), self.ultimaPaginaEscrita() + 1):
+                    posicionPagina = self.paginador.obtenerPagina(numPagina)
+                    pagina = self.paginador.cache[posicionPagina]
+                    baseDeDatos.write(pagina)
     
+    def obtenerTodasLasPaginas(self):
+        paginas = []
+        for numPagina in range(1, self.ultimaPaginaEscrita() + 1):
+            posicionPagina = self.paginador.obtenerPagina(numPagina)
+            pagina = self.paginador.cache[posicionPagina]
+            paginas.append(pagina)
+        return paginas
+
     def obtenerTodosLosRegistros(self):
+        paginas = self.obtenerTodasLasPaginas()
         registros = []
-        for pagina in self.paginas:
-            registros.extend(pagina.obtenerTodosLosRegistros())
+        for pagina in paginas:
+            posicionInicial = 0
+            while (posicionInicial < 4074) and (posicionInicial < len(pagina)):
+                registro = pagina[posicionInicial:posicionInicial+291]
+                registros.append(registro)
+                posicionInicial += 291
         return registros
-        # 
+        
     def serializar(self, registro):
         elementosDelRegistro = registro.split(" ")
         id = elementosDelRegistro[0]
@@ -104,3 +133,10 @@ class Tabla:
             if registro != registros[-1]:
                 registrosDeserializados += "\n"
         return registrosDeserializados
+    
+    def cantPaginasBaseDeDatos(self):
+        tamanioBaseDatos = self.paginador.tamanioBaseDatos
+        if (tamanioBaseDatos % 4096 == 0):
+            return int(tamanioBaseDatos / 4096)
+        else:
+            return int(tamanioBaseDatos / 4096) + 1

@@ -13,8 +13,8 @@ class Paginador:
     # El archivo se abre con permisos para agregar datos y para leer el archivo.
     # Se asigna el archivo abierto a la variable baseDeDatos del paginador
     def abrirBase(self, nombreBaseDeDatos):
-        self.direccionBaseDatos = "datos/" + nombreBaseDeDatos
-        with open(self.direccionBaseDatos, "rb") as baseDeDatos:
+        self.direccionBaseDatos = nombreBaseDeDatos
+        with open(self.direccionBaseDatos, "ab+") as baseDeDatos:
             self.baseDeDatos = baseDeDatos
             self.tamanioBaseDatos = os.path.getsize(self.direccionBaseDatos)
 
@@ -23,9 +23,10 @@ class Paginador:
             self.__pasarPaginaACache(numDePagina)
         return numDePagina
 
-    def getRegistros(self):
+    ## CHEQUEAR
+    """def getRegistros(self):
         with open(self.direccionBaseDatos, "rb") as registros:
-            return registros.read()
+            return registros.read()"""
         
     def __pasarPaginaACache(self, numPagina):
         posicionInicial = 4096 * (numPagina - 1)

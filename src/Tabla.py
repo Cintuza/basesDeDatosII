@@ -1,10 +1,8 @@
-from src.Pagina import Pagina
 from src.Paginador import Paginador
 
 class Tabla:
 
     def __init__(self, paginador):
-        self.paginas = []
         self.paginador = paginador
 
     def ultimaPaginaEscrita(self):
@@ -24,7 +22,7 @@ class Tabla:
         numPagina = self.paginador.obtenerPagina(self.paginaAEscribir())
         self.paginador.cache[numPagina] += registroSerializado
         if len(self.paginador.cache[numPagina]) == 4074:
-            self.paginador.cache[numPagina] += b"\00"*22
+            self.paginador.cache[numPagina] += b"\00" * 22
 
     def cantidadDeRegistrosGuardados(self):
         tamanioBaseDatos = self.paginador.tamanioBaseDatos
@@ -34,8 +32,9 @@ class Tabla:
             return int(tamanioBaseDatos / 4096) * 14 + int((tamanioBaseDatos % 4096) / 291)
         
     def guardarRegistrosEnBaseDeDatos(self):
-        if self.cantPaginasBaseDeDatos() <= self.ultimaPaginaEscrita():
-            paginas = []
+        if len(self.paginador.cache) == 0:
+            pass
+        elif self.cantPaginasBaseDeDatos() <= self.ultimaPaginaEscrita():
             with open(self.paginador.direccionBaseDatos, "ab+") as baseDeDatos:
                 posicion = 4096 * max((self.cantPaginasBaseDeDatos() - 1), 0)
                 baseDeDatos.truncate(posicion)

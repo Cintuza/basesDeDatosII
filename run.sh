@@ -1,2 +1,2 @@
 #cd carpeta/
-python3 main.py baseDeDatos.db
+python3 main.py $1

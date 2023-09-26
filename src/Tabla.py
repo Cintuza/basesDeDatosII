@@ -18,18 +18,32 @@ class Tabla:
             return self.ultimaPaginaEscrita()
         
     def guardarRegistroEnCache(self, registro):
+        idRegistro = self.serializar(registro)[0:4]
         registroSerializado = self.serializar(registro)
+        registroSerializadoConId = idRegistro + registroSerializado
         numPagina = self.paginador.obtenerPagina(self.paginaAEscribir())
-        self.paginador.cache[numPagina] += registroSerializado
+        pagina = self.paginador.cache[numPagina]
+        pagina += registroSerializadoConId
+        cantDeRegistros = int.from_bytes(pagina[6:10], byteorder="big")
+        print(cantDeRegistros)
+        cantDeRegistros += 1
+        print(cantDeRegistros)
+        cantDeRegistrosEnBytes = cantDeRegistros.to_bytes(4, byteorder="big")
+        print(cantDeRegistrosEnBytes)
+        paginaActualizada = pagina[:6] + cantDeRegistrosEnBytes + pagina [10:]
+        print(paginaActualizada)
+        self.paginador.cache[numPagina] = paginaActualizada
         if len(self.paginador.cache[numPagina]) == 4074:
             self.paginador.cache[numPagina] += b"\00" * 22
 
     def cantidadDeRegistrosGuardados(self):
-        tamanioBaseDatos = self.paginador.tamanioBaseDatos
-        if (tamanioBaseDatos % 4096 == 0):
-            return self.cantPaginasBaseDeDatos() * 14
+        if (self.cantPaginasBaseDeDatos() == 0):
+            return 0
         else:
-            return int(tamanioBaseDatos / 4096) * 14 + int((tamanioBaseDatos % 4096) / 291)
+            self.paginador.obtenerPagina(self.paginaAEscribir())
+            pagina = self.paginador.cache[self.ultimaPaginaEscrita()]
+            cantDeRegistros = int.from_bytes(pagina[6:10], byteorder="big")
+            return cantDeRegistros
         
     def guardarRegistrosEnBaseDeDatos(self):
         if len(self.paginador.cache) == 0:
@@ -53,13 +67,15 @@ class Tabla:
 
     def obtenerTodosLosRegistros(self):
         paginas = self.obtenerTodasLasPaginas()
-        registros = []
+        registros = {}
         for pagina in paginas:
-            posicionInicial = 0
+            posicionInicial = 10
             while (posicionInicial < 4074) and (posicionInicial < len(pagina)):
-                registro = pagina[posicionInicial:posicionInicial+291]
-                registros.append(registro)
-                posicionInicial += 291
+                registroConId = pagina[posicionInicial:posicionInicial+295]
+                id = int.from_bytes(registroConId[:4], byteorder="big")
+                registro = registroConId[4:]
+                registros[id] = registro
+                posicionInicial += 295
         return registros
         
     def serializar(self, registro):
@@ -72,7 +88,9 @@ class Tabla:
         nombreSerializado = self.serializarNombre(nombre)
         emailSerializado = self.serializarEmail(email)
 
-        return idSerializado + nombreSerializado + emailSerializado
+        registroSerializado = idSerializado + nombreSerializado + emailSerializado
+
+        return registroSerializado
     
     # Recibe un ID en string, lo convierte a int, y despues a 4 bytes en formato big endian
     def serializarId(self, id):
@@ -124,7 +142,7 @@ class Tabla:
         return str(datosEnBytes, 'ascii')
 
     def obtenerTodosLosRegistrosDeserializados(self):
-        registros = self.obtenerTodosLosRegistros()
+        registros = list(self.obtenerTodosLosRegistros().values())
         registrosDeserializados = ""
         for registro in registros:
             registroDeserializado = self.deserializar(registro)

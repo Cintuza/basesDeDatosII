@@ -22,15 +22,18 @@ class Paginador:
         if not (numDePagina in self.cache):
             self.__pasarPaginaACache(numDePagina)
         return numDePagina
-
-    ## CHEQUEAR
-    """def getRegistros(self):
-        with open(self.direccionBaseDatos, "rb") as registros:
-            return registros.read()"""
         
     def __pasarPaginaACache(self, numPagina):
         posicionInicial = 4096 * (numPagina - 1)
         pagina = bytearray()
+        tipoDeNodo = b'\x01'
+        esRaiz = b'\x01'
+        punteroAXadre = b'\x00\x00\x00\x00'
+        cantidadRegistros = b'\x00\x00\x00\x00'
+        pagina += tipoDeNodo
+        pagina += esRaiz
+        pagina += punteroAXadre
+        pagina += cantidadRegistros
         with open(self.direccionBaseDatos, "rb") as baseDeDatos:
             if posicionInicial < self.tamanioBaseDatos:
                 pagina = baseDeDatos.read()[posicionInicial:posicionInicial+4096]

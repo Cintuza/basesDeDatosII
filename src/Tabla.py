@@ -58,24 +58,7 @@ class Tabla:
             return cantDeRegistros
         
     def guardarRegistrosEnBaseDeDatos(self):
-        if len(self.paginador.cache) == 0:
-            pass
-        elif self.cantPaginasBaseDeDatos() <= self.ultimaPaginaEscrita():
-            with open(self.paginador.direccionBaseDatos, "ab+") as baseDeDatos:
-                posicion = 4096 * max((self.cantPaginasBaseDeDatos() - 1), 0)
-                baseDeDatos.truncate(posicion)
-                if self.cantPaginasBaseDeDatos() == 0:
-                    for numPagina in range(1, self.ultimaPaginaEscrita() + 1):
-                        posicionPagina = self.paginador.obtenerPagina(numPagina)
-                        nodo = self.paginador.cache[posicionPagina]
-                        pagina = nodo.pasarNodoAPagina()
-                        baseDeDatos.write(pagina)
-                else:
-                    for numPagina in range(self.cantPaginasBaseDeDatos(), self.ultimaPaginaEscrita() + 1):
-                        posicionPagina = self.paginador.obtenerPagina(numPagina)
-                        nodo = self.paginador.cache[posicionPagina]
-                        pagina = nodo.pasarNodoAPagina()
-                        baseDeDatos.write(pagina)
+        self.paginador.actualizarArchivo()
 
     def obtenerTodosLosRegistrosDeserializados(self):
         registros = self.obtenerTodosLosRegistros()

@@ -43,3 +43,11 @@ class Paginador:
             # pagina += cantidadRegistros
             pagina = b'\x01\x01' + bytearray(4094)
         self.cache[numPagina] = NodoHoja(pagina)
+
+    def actualizarArchivo(self):
+        with open(self.direccionBaseDatos, "wb+") as baseDeDatos:
+            for numNodo, nodo in self.cache.items():
+                posicion = 4096 * (numNodo - 1)
+                pagina = nodo.pasarNodoAPagina()
+                baseDeDatos.seek(posicion)
+                baseDeDatos.write(pagina)

@@ -1,4 +1,5 @@
 import os
+from src.NodoHoja import NodoHoja
 
 class Paginador:
 
@@ -26,15 +27,19 @@ class Paginador:
     def __pasarPaginaACache(self, numPagina):
         posicionInicial = 4096 * (numPagina - 1)
         pagina = bytearray()
-        tipoDeNodo = b'\x01'
-        esRaiz = b'\x01'
-        punteroAXadre = b'\x00\x00\x00\x00'
-        cantidadRegistros = b'\x00\x00\x00\x00'
-        pagina += tipoDeNodo
-        pagina += esRaiz
-        pagina += punteroAXadre
-        pagina += cantidadRegistros
-        with open(self.direccionBaseDatos, "rb") as baseDeDatos:
-            if posicionInicial < self.tamanioBaseDatos:
+        if posicionInicial < self.tamanioBaseDatos:
+            with open(self.direccionBaseDatos, "rb") as baseDeDatos:
                 pagina = baseDeDatos.read()[posicionInicial:posicionInicial+4096]
-        self.cache[numPagina] = pagina
+        else:
+            # tipoDeNodo = b'\x01'
+            # esRaiz = b'\x00'
+            # if numPagina == 1:
+            #     esRaiz = b'\x01'
+            # punteroAXadre = b'\x00\x00\x00\x00'
+            # cantidadRegistros = b'\x00\x00\x00\x00'
+            # pagina += tipoDeNodo
+            # pagina += esRaiz
+            # pagina += punteroAXadre
+            # pagina += cantidadRegistros
+            pagina = b'\x01\x01' + bytearray(4094)
+        self.cache[numPagina] = NodoHoja(pagina)

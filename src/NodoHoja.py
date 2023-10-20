@@ -1,3 +1,5 @@
+from src.NodoInterno import NodoInterno
+
 class NodoHoja:
 
     def __init__(self, pagina):
@@ -48,3 +50,11 @@ class NodoHoja:
                 posicionDelRegistroAAgregar += 1
                 registroEnPagina = registrosEnPagina[posicionDelRegistroAAgregar]
         return posicionDelRegistroAAgregar
+    
+    def convertirEnNodoInterno(self):
+        pagina = b"\00"
+        pagina += self.esRaiz
+        pagina += self.punteroAXadre
+        pagina += (b"\00" * 4090)
+        nodoInterno = NodoInterno(pagina)
+        return nodoInterno

@@ -31,23 +31,14 @@ class Paginador:
             with open(self.direccionBaseDatos, "rb") as baseDeDatos:
                 pagina = baseDeDatos.read()[posicionInicial:posicionInicial+4096]
         else:
-            # tipoDeNodo = b'\x01'
-            # esRaiz = b'\x00'
-            # if numPagina == 1:
-            #     esRaiz = b'\x01'
-            # punteroAXadre = b'\x00\x00\x00\x00'
-            # cantidadRegistros = b'\x00\x00\x00\x00'
-            # pagina += tipoDeNodo
-            # pagina += esRaiz
-            # pagina += punteroAXadre
-            # pagina += cantidadRegistros
-            pagina = b'\x01\x01' + bytearray(4094)
+            pagina = b'\x01\x00' + bytearray(4094)
         self.cache[numPagina] = NodoHoja(pagina)
 
     def actualizarArchivo(self):
-        with open(self.direccionBaseDatos, "wb+") as baseDeDatos:
-            for numNodo, nodo in self.cache.items():
-                posicion = 4096 * (numNodo - 1)
-                pagina = nodo.pasarNodoAPagina()
-                baseDeDatos.seek(posicion)
-                baseDeDatos.write(pagina)
+        if len(self.cache) != 0:
+            with open(self.direccionBaseDatos, "wb+") as baseDeDatos:
+                for numNodo, nodo in self.cache.items():
+                    posicion = 4096 * (numNodo - 1)
+                    pagina = nodo.pasarNodoAPagina()
+                    baseDeDatos.seek(posicion)
+                    baseDeDatos.write(pagina)

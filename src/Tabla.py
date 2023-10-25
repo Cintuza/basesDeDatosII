@@ -6,11 +6,45 @@ class Tabla:
     def __init__(self, paginador):
         self.paginador = paginador
 
-    def paginaAEscribir(self):
-        if len(self.obtenerTodosLosRegistros()) % 14 == 0:
-            return self.ultimaPaginaEscrita() + 1
+    def paginaAEscribir(self, idRegistro):
+        numPaginaRaiz = self.paginador.obtenerPagina(1)
+        nodoRaiz = self.paginador.cache[1]
+        esNodoHoja = bool.from_bytes(nodoRaiz.tipoDeNodo)
+        if esNodoHoja:
+            return numPaginaRaiz
         else:
-            return self.ultimaPaginaEscrita()
+            numPaginaAEscribir = None
+            idRegistroDeserializado = int.from_bytes(idRegistro, byteorder = "big")
+            for pagina, id in nodoRaiz.punteros.items():
+                if id > idRegistroDeserializado:
+                    numPaginaAEscribir = pagina
+                    break
+            if numPaginaAEscribir == None:
+                punteroDerecho = int.from_bytes(nodoRaiz.punteroAHijeDerecho, byteorder = "big")
+                numPaginaAEscribir = punteroDerecho
+            return numPaginaAEscribir
+
+        # if len(self.obtenerTodosLosRegistros()) % 14 == 0:
+        #     return self.ultimaPaginaEscrita() + 1
+        # else:
+        #     return self.ultimaPaginaEscrita()
+        
+#     buscar pagina para guardar registro (pasar como parametro id del registro)
+
+# get raiz pagina 1 
+#     si es nodo hoja
+#         -> return pagina 1
+    
+#     si es nodo interno
+#         -> cantidad de punteros
+#         -> pagina = none
+#         -> for puntero in punteros
+#             -> if valor de puntero es mayor al id del registro
+#                 -> pagina = clave del puntero (numero de pagina)
+#                 -> break
+#         -> if pagina is none
+#             -> pagina = puntero derecho raiz pagina 1
+#         return pagina
 
     def ultimaPaginaEscrita(self):
         if len(self.paginador.cache) == 0:
@@ -35,7 +69,7 @@ class Tabla:
     def guardarRegistroEnCache(self, registro):
         registroSerializado = self.serializar(registro)
         # obtengo la pagina a escribir
-        numPagina = self.paginador.obtenerPagina(self.paginaAEscribir())
+        numPagina = self.paginador.obtenerPagina(self.paginaAEscribir(registroSerializado[:4]))
         nodoHoja = self.paginador.cache[numPagina]
         # agrego el registro a la lista de registros del nodo
         self.agregarRegistroAPagina(nodoHoja, registroSerializado)

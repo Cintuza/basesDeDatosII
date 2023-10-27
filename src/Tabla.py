@@ -24,28 +24,6 @@ class Tabla:
                 numPaginaAEscribir = punteroDerecho
             return numPaginaAEscribir
 
-        # if len(self.obtenerTodosLosRegistros()) % 14 == 0:
-        #     return self.ultimaPaginaEscrita() + 1
-        # else:
-        #     return self.ultimaPaginaEscrita()
-        
-#     buscar pagina para guardar registro (pasar como parametro id del registro)
-
-# get raiz pagina 1 
-#     si es nodo hoja
-#         -> return pagina 1
-    
-#     si es nodo interno
-#         -> cantidad de punteros
-#         -> pagina = none
-#         -> for puntero in punteros
-#             -> if valor de puntero es mayor al id del registro
-#                 -> pagina = clave del puntero (numero de pagina)
-#                 -> break
-#         -> if pagina is none
-#             -> pagina = puntero derecho raiz pagina 1
-#         return pagina
-
     def ultimaPaginaEscrita(self):
         if len(self.paginador.cache) == 0:
             return self.cantPaginasBaseDeDatos()
@@ -130,7 +108,7 @@ class Tabla:
         self.paginador.actualizarArchivo()
 
     def obtenerTodosLosRegistrosDeserializados(self):
-        registros = self.obtenerTodosLosRegistros()
+        registros = self.obtenerTodosLosRegistros(1)
         registrosDeserializados = ""
         for registro in registros:
             registro = registro[4:]
@@ -140,15 +118,24 @@ class Tabla:
                 registrosDeserializados += "\n"
         return registrosDeserializados
 
-    def obtenerTodosLosRegistros(self):
-        paginas = self.obtenerTodasLasPaginas()
+    def obtenerTodosLosRegistros(self, numPagina):
+        self.paginador.obtenerPagina(numPagina)
+        nodo = self.paginador.cache[numPagina]
         registros = []
-        for pagina in paginas:
-            tipoDeNodo = int.from_bytes(pagina.tipoDeNodo)
-            if tipoDeNodo == 1:
-                registros += pagina.registros
+        esNodoHoja = bool.from_bytes(nodo.tipoDeNodo)
+        print(numPagina)
+        print(esNodoHoja)
+        if esNodoHoja:
+            registros.extend(nodo.registros)
+        else:
+            punteros = nodo.punteros
+            punteroHijeDerecho = int.from_bytes(nodo.punteroAHijeDerecho, byteorder="big")
+            print(punteroHijeDerecho)
+            for numPagina in punteros.keys():
+                registros.extend(self.obtenerTodosLosRegistros(numPagina))
+            registros.extend(self.obtenerTodosLosRegistros(punteroHijeDerecho))
         return registros
-    
+
     def obtenerTodasLasPaginas(self):
         paginas = []
         for numPagina in range(1, self.ultimaPaginaEscrita() + 1):

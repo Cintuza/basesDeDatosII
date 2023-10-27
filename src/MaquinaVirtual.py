@@ -11,7 +11,7 @@ class MaquinaVirtual:
             print("Terminado")
             exit()
         elif query == ".table-metadata":
-            print("Paginas: " + str(self.tabla.cantPaginasBaseDeDatos()) + "\n" + "Registros: " + str(self.tabla.cantidadDeRegistrosGuardados()))
+            print("Paginas: " + str(self.tabla.cantPaginasBaseDeDatos()) + "\n" + "Registros: " + str(self.tabla.cantidadDeRegistrosGuardados(1)))
         else:
             print(query + " no es un comando valido")
 

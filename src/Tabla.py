@@ -94,16 +94,21 @@ class Tabla:
     def obtenerPosicionDeRegistroAInsertar(self, nodoHoja, idRegistroAInsertar):
         return nodoHoja.posicionParaNuevoRegistro(idRegistroAInsertar)
 
-    def cantidadDeRegistrosGuardados(self):
-        return 0
-        # if (self.cantPaginasBaseDeDatos() == 0):
-        #     return 0
-        # else:
-        #     self.paginador.obtenerPagina(self.paginaAEscribir())
-        #     pagina = self.paginador.cache[self.ultimaPaginaEscrita()]
-        #     cantDeRegistros = self.getCantidadDeRegistrosPagina(pagina)
-        #     return cantDeRegistros
-        
+    def cantidadDeRegistrosGuardados(self, numPagina):
+        self.paginador.obtenerPagina(numPagina)
+        nodo = self.paginador.cache[numPagina]
+        cantidadDeRegistrosTotal = 0
+        esNodoHoja = bool.from_bytes(nodo.tipoDeNodo)
+        if esNodoHoja:
+            cantidadDeRegistrosTotal += self.getCantidadDeRegistrosPagina(nodo)
+        else:
+            punteros = nodo.punteros
+            punteroHijeDerecho = int.from_bytes(nodo.punteroAHijeDerecho, byteorder="big")
+            for numPagina in punteros.keys():
+                cantidadDeRegistrosTotal += self.cantidadDeRegistrosGuardados(numPagina)
+            cantidadDeRegistrosTotal += (self.cantidadDeRegistrosGuardados(punteroHijeDerecho))
+        return cantidadDeRegistrosTotal
+    
     def guardarRegistrosEnBaseDeDatos(self):
         self.paginador.actualizarArchivo()
 
@@ -123,14 +128,11 @@ class Tabla:
         nodo = self.paginador.cache[numPagina]
         registros = []
         esNodoHoja = bool.from_bytes(nodo.tipoDeNodo)
-        print(numPagina)
-        print(esNodoHoja)
         if esNodoHoja:
             registros.extend(nodo.registros)
         else:
             punteros = nodo.punteros
             punteroHijeDerecho = int.from_bytes(nodo.punteroAHijeDerecho, byteorder="big")
-            print(punteroHijeDerecho)
             for numPagina in punteros.keys():
                 registros.extend(self.obtenerTodosLosRegistros(numPagina))
             registros.extend(self.obtenerTodosLosRegistros(punteroHijeDerecho))

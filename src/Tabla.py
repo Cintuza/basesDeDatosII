@@ -93,19 +93,32 @@ class Tabla:
             nodoXadre = self.paginador.cache[punteroAXadre]
             cantidadDePunteros = int.from_bytes(nodoXadre.cantidadClaves, byteorder="big")
             self.setCantidadDeClaves(nodoXadre, cantidadDePunteros + 1)
+
+            punteroHijeDerecho = int.from_bytes(nodoXadre.punteroAHijeDerecho, byteorder="big")
             # actualizo puntero nodo anterior en nodo xadre
             ultimoRegistroDelNodoRaiz = nodoRaiz.registros[6]
             idUltimoRegistroDelNodoRaiz = int.from_bytes(ultimoRegistroDelNodoRaiz[:4], byteorder="big")
             nodoXadre.punteros[numPaginaRaiz] = idUltimoRegistroDelNodoRaiz
             # agrego puntero de nodo nuevo en nodo xadre
-            ultimoRegistroDelPrimerNodo = primerNodoHojaNuevo.registros[6]
-            idUltimoRegistroDelPrimerNodo = int.from_bytes(ultimoRegistroDelPrimerNodo[:4], byteorder="big")
-            nodoXadre.punteros[numPrimerNodoHojaNuevo] = idUltimoRegistroDelPrimerNodo
+            if punteroHijeDerecho == numPaginaRaiz:
+                self.setPunteroAHijeDerecho(nodoXadre, numPrimerNodoHojaNuevo)
+            else:
+                ultimoRegistroDelPrimerNodo = primerNodoHojaNuevo.registros[6]
+                idUltimoRegistroDelPrimerNodo = int.from_bytes(ultimoRegistroDelPrimerNodo[:4], byteorder="big")
+                nodoXadre.punteros[numPrimerNodoHojaNuevo] = idUltimoRegistroDelPrimerNodo
             # ordeno los punteros
             nodoXadre.punteros = dict(sorted(nodoXadre.punteros.items(), key=operator.itemgetter(1)))
             self.paginador.cache[numPaginaRaiz] = nodoRaiz
             self.paginador.cache[numPrimerNodoHojaNuevo] = primerNodoHojaNuevo
             self.paginador.cache[punteroAXadre] = nodoXadre
+
+    def agregarPunteroANodoInterno(self, nodoInterno, numPagina, nodo):
+        ultimoRegistroDelNodo = nodo.registros[-1]
+        idUltimoRegistroDelNodo = int.from_bytes(ultimoRegistroDelNodo[:4], byteorder="big")
+        punteroHijeDerecho = int.from_bytes(nodoInterno.punteroAHijeDerecho, byteorder="big")
+        nodoInterno.punteros[numPagina] = idUltimoRegistroDelNodo
+        # ordeno los punteros
+        nodoInterno.punteros = dict(sorted(nodoInterno.punteros.items(), key=operator.itemgetter(1)))
 
     def agregarRegistroAPagina(self, nodoHoja, registroSerializado):
         idRegistro = registroSerializado[0:4]

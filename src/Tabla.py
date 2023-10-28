@@ -6,24 +6,6 @@ class Tabla:
     def __init__(self, paginador):
         self.paginador = paginador
 
-    def paginaAEscribir(self, idRegistro):
-        numPaginaRaiz = self.paginador.obtenerPagina(1)
-        nodoRaiz = self.paginador.cache[1]
-        esNodoHoja = bool.from_bytes(nodoRaiz.tipoDeNodo)
-        if esNodoHoja:
-            return numPaginaRaiz
-        else:
-            numPaginaAEscribir = None
-            idRegistroDeserializado = int.from_bytes(idRegistro, byteorder = "big")
-            for pagina, id in nodoRaiz.punteros.items():
-                if id > idRegistroDeserializado:
-                    numPaginaAEscribir = pagina
-                    break
-            if numPaginaAEscribir == None:
-                punteroDerecho = int.from_bytes(nodoRaiz.punteroAHijeDerecho, byteorder = "big")
-                numPaginaAEscribir = punteroDerecho
-            return numPaginaAEscribir
-
     def ultimaPaginaEscrita(self):
         if len(self.paginador.cache) == 0:
             return self.cantPaginasBaseDeDatos()
@@ -44,41 +26,55 @@ class Tabla:
         else:
             return int(tamanioBaseDatos / 4096) + 1
         
-    def guardarRegistroEnCache(self, registro):
+    def guardarRegistroEnCache(self, registro, numPagina):
         registroSerializado = self.serializar(registro)
-        # obtengo la pagina a escribir
-        numPagina = self.paginador.obtenerPagina(self.paginaAEscribir(registroSerializado[:4]))
-        nodoHoja = self.paginador.cache[numPagina]
-        # agrego el registro a la lista de registros del nodo
-        self.agregarRegistroAPagina(nodoHoja, registroSerializado)
-        if self.getCantidadDeRegistrosPagina(nodoHoja) < 14:
-            self.paginador.cache[numPagina] = nodoHoja
+        numPaginaRaiz = self.paginador.obtenerPagina(numPagina)
+        nodoRaiz = self.paginador.cache[numPaginaRaiz]
+        esNodoHoja = bool.from_bytes(nodoRaiz.tipoDeNodo)
+        if esNodoHoja:
+            self.agregarRegistroAPagina(nodoRaiz, registroSerializado)
+            if self.getCantidadDeRegistrosPagina(nodoRaiz) < 14:
+                self.paginador.cache[numPaginaRaiz] = nodoRaiz
+            else:
+                self.dividirNodo(numPaginaRaiz, nodoRaiz)
         else:
-            # primer nodo hoja nuevo
-            numPrimerNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
-            primerNodoHojaNuevo = self.paginador.cache[numPrimerNodoHojaNuevo]
-            # segundo nodo hoja nuevo
-            numSegundoNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
-            segundoNodoHojaNuevo = self.paginador.cache[numSegundoNodoHojaNuevo]
-            # se actualizan los registros y cantidad de reg en ambos nodos
-            primerNodoHojaNuevo.registros = nodoHoja.registros[:7]
-            segundoNodoHojaNuevo.registros = nodoHoja.registros[7:]
-            self.setCantidadDeRegistrosPagina(primerNodoHojaNuevo, 7)
-            self.setCantidadDeRegistrosPagina(segundoNodoHojaNuevo, 7)
-            # se completa puntero a nodo xadre
-            self.setPunteroAXadre(primerNodoHojaNuevo, numPagina)
-            self.setPunteroAXadre(segundoNodoHojaNuevo, numPagina)
-            # se pasa en nodo raiz a nodo interno
-            nodoInterno = nodoHoja.convertirEnNodoInterno()
-            ultimoRegistroDelPrimerNodo = primerNodoHojaNuevo.registros[6]
-            idUltimoRegistroDelPrimerNodo = int.from_bytes(ultimoRegistroDelPrimerNodo[:4], byteorder="big")
-            nodoInterno.punteros[numPrimerNodoHojaNuevo] = idUltimoRegistroDelPrimerNodo
-            self.setCantidadDeClaves(nodoInterno, 1)
-            self.setPunteroAHijeDerecho(nodoInterno, numSegundoNodoHojaNuevo)
-            # se actualizan los nodos en el cache
-            self.paginador.cache[numPagina] = nodoInterno
-            self.paginador.cache[numPrimerNodoHojaNuevo] = primerNodoHojaNuevo
-            self.paginador.cache[numSegundoNodoHojaNuevo] = segundoNodoHojaNuevo
+            numPaginaAEscribir = None
+            idRegistroDeserializado = int.from_bytes(registroSerializado[:4], byteorder = "big")
+            for pagina, id in nodoRaiz.punteros.items():
+                if id > idRegistroDeserializado:
+                    numPaginaAEscribir = pagina
+                    break
+            if numPaginaAEscribir == None:
+                punteroDerecho = int.from_bytes(nodoRaiz.punteroAHijeDerecho, byteorder = "big")
+                numPaginaAEscribir = punteroDerecho
+            self.guardarRegistroEnCache(registro, numPaginaAEscribir)
+
+    def dividirNodo(self, numPaginaRaiz, nodoRaiz):
+        #primer nodo hoja nuevo
+        numPrimerNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
+        primerNodoHojaNuevo = self.paginador.cache[numPrimerNodoHojaNuevo]
+        # segundo nodo hoja nuevo
+        numSegundoNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
+        segundoNodoHojaNuevo = self.paginador.cache[numSegundoNodoHojaNuevo]
+        # se actualizan los registros y cantidad de reg en ambos nodos
+        primerNodoHojaNuevo.registros = nodoRaiz.registros[:7]
+        segundoNodoHojaNuevo.registros = nodoRaiz.registros[7:]
+        self.setCantidadDeRegistrosPagina(primerNodoHojaNuevo, 7)
+        self.setCantidadDeRegistrosPagina(segundoNodoHojaNuevo, 7)
+        # se completa puntero a nodo xadre
+        self.setPunteroAXadre(primerNodoHojaNuevo, numPaginaRaiz)
+        self.setPunteroAXadre(segundoNodoHojaNuevo, numPaginaRaiz)
+        # se pasa en nodo raiz a nodo interno
+        nodoInterno = nodoRaiz.convertirEnNodoInterno()
+        ultimoRegistroDelPrimerNodo = primerNodoHojaNuevo.registros[6]
+        idUltimoRegistroDelPrimerNodo = int.from_bytes(ultimoRegistroDelPrimerNodo[:4], byteorder="big")
+        nodoInterno.punteros[numPrimerNodoHojaNuevo] = idUltimoRegistroDelPrimerNodo
+        self.setCantidadDeClaves(nodoInterno, 1)
+        self.setPunteroAHijeDerecho(nodoInterno, numSegundoNodoHojaNuevo)
+        # se actualizan los nodos en el cache
+        self.paginador.cache[numPaginaRaiz] = nodoInterno
+        self.paginador.cache[numPrimerNodoHojaNuevo] = primerNodoHojaNuevo
+        self.paginador.cache[numSegundoNodoHojaNuevo] = segundoNodoHojaNuevo
 
     def agregarRegistroAPagina(self, nodoHoja, registroSerializado):
         idRegistro = registroSerializado[0:4]

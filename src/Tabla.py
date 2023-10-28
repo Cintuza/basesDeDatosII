@@ -1,5 +1,6 @@
 from src.Paginador import Paginador
 from src.NodoHoja import NodoHoja
+import operator
 
 class Tabla:
 
@@ -50,31 +51,61 @@ class Tabla:
             self.guardarRegistroEnCache(registro, numPaginaAEscribir)
 
     def dividirNodo(self, numPaginaRaiz, nodoRaiz):
-        #primer nodo hoja nuevo
-        numPrimerNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
-        primerNodoHojaNuevo = self.paginador.cache[numPrimerNodoHojaNuevo]
-        # segundo nodo hoja nuevo
-        numSegundoNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
-        segundoNodoHojaNuevo = self.paginador.cache[numSegundoNodoHojaNuevo]
-        # se actualizan los registros y cantidad de reg en ambos nodos
-        primerNodoHojaNuevo.registros = nodoRaiz.registros[:7]
-        segundoNodoHojaNuevo.registros = nodoRaiz.registros[7:]
-        self.setCantidadDeRegistrosPagina(primerNodoHojaNuevo, 7)
-        self.setCantidadDeRegistrosPagina(segundoNodoHojaNuevo, 7)
-        # se completa puntero a nodo xadre
-        self.setPunteroAXadre(primerNodoHojaNuevo, numPaginaRaiz)
-        self.setPunteroAXadre(segundoNodoHojaNuevo, numPaginaRaiz)
-        # se pasa en nodo raiz a nodo interno
-        nodoInterno = nodoRaiz.convertirEnNodoInterno()
-        ultimoRegistroDelPrimerNodo = primerNodoHojaNuevo.registros[6]
-        idUltimoRegistroDelPrimerNodo = int.from_bytes(ultimoRegistroDelPrimerNodo[:4], byteorder="big")
-        nodoInterno.punteros[numPrimerNodoHojaNuevo] = idUltimoRegistroDelPrimerNodo
-        self.setCantidadDeClaves(nodoInterno, 1)
-        self.setPunteroAHijeDerecho(nodoInterno, numSegundoNodoHojaNuevo)
-        # se actualizan los nodos en el cache
-        self.paginador.cache[numPaginaRaiz] = nodoInterno
-        self.paginador.cache[numPrimerNodoHojaNuevo] = primerNodoHojaNuevo
-        self.paginador.cache[numSegundoNodoHojaNuevo] = segundoNodoHojaNuevo
+        esRaiz = self.getEsRaiz(nodoRaiz)
+        if esRaiz:
+            #primer nodo hoja nuevo
+            numPrimerNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
+            primerNodoHojaNuevo = self.paginador.cache[numPrimerNodoHojaNuevo]
+            # segundo nodo hoja nuevo
+            numSegundoNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
+            segundoNodoHojaNuevo = self.paginador.cache[numSegundoNodoHojaNuevo]
+            # se actualizan los registros y cantidad de reg en ambos nodos
+            primerNodoHojaNuevo.registros = nodoRaiz.registros[:7]
+            segundoNodoHojaNuevo.registros = nodoRaiz.registros[7:]
+            self.setCantidadDeRegistrosPagina(primerNodoHojaNuevo, 7)
+            self.setCantidadDeRegistrosPagina(segundoNodoHojaNuevo, 7)
+            # se completa puntero a nodo xadre
+            self.setPunteroAXadre(primerNodoHojaNuevo, numPaginaRaiz)
+            self.setPunteroAXadre(segundoNodoHojaNuevo, numPaginaRaiz)
+            # se pasa en nodo raiz a nodo interno
+            nodoInterno = nodoRaiz.convertirEnNodoInterno()
+            ultimoRegistroDelPrimerNodo = primerNodoHojaNuevo.registros[6]
+            idUltimoRegistroDelPrimerNodo = int.from_bytes(ultimoRegistroDelPrimerNodo[:4], byteorder="big")
+            nodoInterno.punteros[numPrimerNodoHojaNuevo] = idUltimoRegistroDelPrimerNodo
+            self.setCantidadDeClaves(nodoInterno, 1)
+            self.setPunteroAHijeDerecho(nodoInterno, numSegundoNodoHojaNuevo)
+            # se actualizan los nodos en el cache
+            self.paginador.cache[numPaginaRaiz] = nodoInterno
+            self.paginador.cache[numPrimerNodoHojaNuevo] = primerNodoHojaNuevo
+            self.paginador.cache[numSegundoNodoHojaNuevo] = segundoNodoHojaNuevo
+        else:
+            # nodo hoja nuevo
+            numPrimerNodoHojaNuevo = self.paginador.obtenerPagina(self.paginaNueva())
+            primerNodoHojaNuevo = self.paginador.cache[numPrimerNodoHojaNuevo]
+            # se actualizan los registros y cantidad de reg en ambos nodos
+            primerNodoHojaNuevo.registros = nodoRaiz.registros[7:]
+            nodoRaiz.registros = nodoRaiz.registros[:7]
+            self.setCantidadDeRegistrosPagina(primerNodoHojaNuevo, 7)
+            self.setCantidadDeRegistrosPagina(nodoRaiz, 7)
+            # se completa puntero a nodo xadre en el nodo nuevo
+            punteroAXadre = int.from_bytes(nodoRaiz.punteroAXadre, byteorder="big")
+            self.setPunteroAXadre(primerNodoHojaNuevo, punteroAXadre)
+            nodoXadre = self.paginador.cache[punteroAXadre]
+            cantidadDePunteros = int.from_bytes(nodoXadre.cantidadClaves, byteorder="big")
+            self.setCantidadDeClaves(nodoXadre, cantidadDePunteros + 1)
+            # actualizo puntero nodo anterior en nodo xadre
+            ultimoRegistroDelNodoRaiz = nodoRaiz.registros[6]
+            idUltimoRegistroDelNodoRaiz = int.from_bytes(ultimoRegistroDelNodoRaiz[:4], byteorder="big")
+            nodoXadre.punteros[numPaginaRaiz] = idUltimoRegistroDelNodoRaiz
+            # agrego puntero de nodo nuevo en nodo xadre
+            ultimoRegistroDelPrimerNodo = primerNodoHojaNuevo.registros[6]
+            idUltimoRegistroDelPrimerNodo = int.from_bytes(ultimoRegistroDelPrimerNodo[:4], byteorder="big")
+            nodoXadre.punteros[numPrimerNodoHojaNuevo] = idUltimoRegistroDelPrimerNodo
+            # ordeno los punteros
+            nodoXadre.punteros = dict(sorted(nodoXadre.punteros.items(), key=operator.itemgetter(1)))
+            self.paginador.cache[numPaginaRaiz] = nodoRaiz
+            self.paginador.cache[numPrimerNodoHojaNuevo] = primerNodoHojaNuevo
+            self.paginador.cache[punteroAXadre] = nodoXadre
 
     def agregarRegistroAPagina(self, nodoHoja, registroSerializado):
         idRegistro = registroSerializado[0:4]
@@ -209,8 +240,8 @@ class Tabla:
         tipoDeNodo = pagina[0:1]
         return tipoDeNodo
     
-    def getEsRaiz(self, pagina):
-        esRaiz = pagina[1:2]
+    def getEsRaiz(self, nodo):
+        esRaiz = bool.from_bytes(nodo.esRaiz)
         return esRaiz
     
     def getPunteroAXadre(self, pagina):

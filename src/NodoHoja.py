@@ -1,19 +1,34 @@
+from src.Nodo import Nodo
 from src.NodoInterno import NodoInterno
 
-class NodoHoja:
+class NodoHoja(Nodo):
 
     def __init__(self, pagina):
         self.tipoDeNodo = pagina[:1]
         self.esRaiz = pagina[1:2]
         self.punteroAXadre = pagina[2:6]
-        self.cantidadRegistros = pagina[6:10]
-        self.registros = self.listarRegistros(pagina[10:])
+        self.cantidadDeElementos = pagina[6:10]
+        self.elementos = self.listarRegistros(pagina[10:])
+
+    def getTipoDeNodo(self):
+        return int.from_bytes(self.tipoDeNodo)
+
+    def getEsRaiz(self):
+        return bool.from_bytes(self.esRaiz)
+
+    def getPunteroAXadre(self):
+        return int.from_bytes(self.punteroAXadre, byteorder="big")
+    
+    def getCantidadDeElementos(self):
+        return int.from_bytes(self.cantidadDeElementos, byteorder="big")
 
     def listarRegistros(self, registros):
-        cantidadDeRegistros = int.from_bytes(self.cantidadRegistros, byteorder="big")
-        listaDeRegistros = []
+        cantidadDeRegistros = self.getCantidadDeElementos()
+        listaDeRegistros = {}
         while cantidadDeRegistros != 0:
-            listaDeRegistros.append(registros[:295])
+            idRegistro = int.from_bytes(registros[:4], byteorder="big")
+            registro = registros[4:295]
+            listaDeRegistros[idRegistro] = registro
             registros = registros[295:]
             cantidadDeRegistros -= 1
         return listaDeRegistros
@@ -22,22 +37,23 @@ class NodoHoja:
         pagina = self.tipoDeNodo
         pagina += self.esRaiz
         pagina += self.punteroAXadre
-        pagina += self.cantidadRegistros
+        pagina += self.cantidadDeElementos
         registros = b''
-        for registro in self.registros:
+        for idRegistro, registro in self.elementos.items():
+            registros += idRegistro.to_bytes(4, byteorder="big")
             registros += registro
         pagina += registros
-        cantidadDeRegistros = int.from_bytes(self.cantidadRegistros, byteorder="big")
+        cantidadDeRegistros = self.getCantidadDeElementos()
         cantidadDeNulosParaCompletarPagina = 4096 - (cantidadDeRegistros * 295 + 10)
         pagina += (b"\00" * cantidadDeNulosParaCompletarPagina)
         return pagina
     
     def insertarRegistroEn(self, posicion, registro):
-        self.registros.insert(posicion, registro)
+        self.elementos.insert(posicion, registro)
 
     def posicionParaNuevoRegistro(self, idRegistroAInsertar):
-        cantDeRegistros = int.from_bytes(self.cantidadRegistros, byteorder="big")
-        registrosEnPagina = self.registros
+        cantDeRegistros = self.getCantidadDeElementos()
+        registrosEnPagina = self.elementos
         posicionDelRegistroAAgregar = None
         if cantDeRegistros == 0:
             posicionDelRegistroAAgregar = 0

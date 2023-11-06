@@ -31,17 +31,17 @@ class Tabla:
         registroSerializado = self.serializar(registro)
         numPaginaRaiz = self.paginador.obtenerPagina(numPagina)
         nodoRaiz = self.paginador.cache[numPaginaRaiz]
-        esNodoHoja = bool.from_bytes(nodoRaiz.tipoDeNodo)
+        esNodoHoja = (1 == self.getTipoNodo(nodoRaiz))
         if esNodoHoja:
             self.agregarRegistroAPagina(nodoRaiz, registroSerializado)
-            if self.getCantidadDeRegistrosPagina(nodoRaiz) < 14:
+            if self.getCantidadDeElementos(nodoRaiz) < 14:
                 self.paginador.cache[numPaginaRaiz] = nodoRaiz
             else:
                 self.dividirNodo(numPaginaRaiz, nodoRaiz)
         else:
             numPaginaAEscribir = None
             idRegistroDeserializado = int.from_bytes(registroSerializado[:4], byteorder = "big")
-            for pagina, id in nodoRaiz.punteros.items():
+            for pagina, id in nodoRaiz.elementos.items():
                 if id > idRegistroDeserializado:
                     numPaginaAEscribir = pagina
                     break
@@ -52,7 +52,7 @@ class Tabla:
 
     def dividirNodo(self, numPaginaNodo, nodo):
         esRaiz = self.getEsRaiz(nodo)
-        registros = nodo.registros
+        registros = nodo.elementos.items()
         if esRaiz:
             # primer nodo
             numPrimerNodo = self.paginador.obtenerPagina(self.paginaNueva())
@@ -65,57 +65,52 @@ class Tabla:
             numPrimerNodo = numPaginaNodo
             primerNodo = self.paginador.cache[numPaginaNodo]
             # nodo xadre
-            punteroAXadre = int.from_bytes(nodo.punteroAXadre, byteorder="big")
+            punteroAXadre = self.getPunteroAXadre(nodo)
             nodoXadre = self.paginador.cache[punteroAXadre]    
         # segundo nodo
         numSegundoNodo = self.paginador.obtenerPagina(self.paginaNueva())
         segundoNodo = self.paginador.cache[numSegundoNodo]
         # se actualizan los registros y cantidad de reg en ambos nodos
-        primerNodo.registros = registros[:7]
-        segundoNodo.registros = registros[7:]
+        primerNodo.elementos = dict(list(registros)[:len(registros)//2])
+        segundoNodo.elementos = dict(list(registros)[len(registros)//2:])
         self.setCantidadDeRegistrosPagina(primerNodo, 7)
         self.setCantidadDeRegistrosPagina(segundoNodo, 7)
         # se completa puntero a nodo xadre en el nodo nuevo
         self.setPunteroAXadre(primerNodo, punteroAXadre)
         self.setPunteroAXadre(segundoNodo, punteroAXadre)
-        cantidadDePunteros = int.from_bytes(nodoXadre.cantidadClaves, byteorder="big")
+        cantidadDePunteros = self.getCantidadDeElementos(nodoXadre)
         self.setCantidadDeClaves(nodoXadre, cantidadDePunteros + 1)
         punteroHijeDerecho = int.from_bytes(nodoXadre.punteroAHijeDerecho, byteorder="big")
         # actualizo puntero nodo anterior en nodo xadre
-        ultimoRegistroDelNodoRaiz = primerNodo.registros[-1]
-        idUltimoRegistroDelNodoRaiz = int.from_bytes(ultimoRegistroDelNodoRaiz[:4], byteorder="big")
-        nodoXadre.punteros[numPrimerNodo] = idUltimoRegistroDelNodoRaiz
+        idUltimoRegistroDelNodoRaiz = list(primerNodo.elementos)[-1]
+        nodoXadre.elementos[numPrimerNodo] = idUltimoRegistroDelNodoRaiz
         # agrego puntero de nodo nuevo en nodo xadre
         if punteroHijeDerecho == numPaginaNodo or esRaiz:
             self.setPunteroAHijeDerecho(nodoXadre, numSegundoNodo)
         else:
-            ultimoRegistroDelSegundoNodo = segundoNodo.registros[-1]
-            idUltimoRegistroDelSegundoNodo = int.from_bytes(ultimoRegistroDelSegundoNodo[:4], byteorder="big")
-            nodoXadre.punteros[numSegundoNodo] = idUltimoRegistroDelSegundoNodo
+            idUltimoRegistroDelSegundoNodo = list(segundoNodo.elementos)[-1]
+            nodoXadre.elementos[numSegundoNodo] = idUltimoRegistroDelSegundoNodo
         # ordeno los punteros
-        nodoXadre.punteros = dict(sorted(nodoXadre.punteros.items(), key=operator.itemgetter(1)))
+        nodoXadre.elementos = dict(sorted(nodoXadre.elementos.items(), key=operator.itemgetter(1)))
         self.paginador.cache[numSegundoNodo] = segundoNodo
         self.paginador.cache[numPrimerNodo] = primerNodo
         self.paginador.cache[punteroAXadre] = nodoXadre
         
     def agregarPunteroANodoInterno(self, nodoInterno, numPagina, nodo):
-        ultimoRegistroDelNodo = nodo.registros[-1]
+        ultimoRegistroDelNodo = nodo.elementos[-1]
         idUltimoRegistroDelNodo = int.from_bytes(ultimoRegistroDelNodo[:4], byteorder="big")
         punteroHijeDerecho = int.from_bytes(nodoInterno.punteroAHijeDerecho, byteorder="big")
-        nodoInterno.punteros[numPagina] = idUltimoRegistroDelNodo
+        nodoInterno.elementos[numPagina] = idUltimoRegistroDelNodo
         # ordeno los punteros
-        nodoInterno.punteros = dict(sorted(nodoInterno.punteros.items(), key=operator.itemgetter(1)))
+        nodoInterno.elementos = dict(sorted(nodoInterno.elementos.items(), key=operator.itemgetter(1)))
 
     def agregarRegistroAPagina(self, nodoHoja, registroSerializado):
-        idRegistro = registroSerializado[0:4]
-        registroSerializadoConId = idRegistro + registroSerializado
-        # agrego el registro a la lista de registros del nodo
-        posicionDelRegistroAAgregar = self.obtenerPosicionDeRegistroAInsertar(nodoHoja, idRegistro)
-        # actualizo cantidad de registros en nodo
-        cantDeRegistros = self.getCantidadDeRegistrosPagina(nodoHoja)
+        idRegistro = int.from_bytes(registroSerializado[:4], byteorder="big")
+        nodoHoja.elementos[idRegistro] = registroSerializado
+        nodoHoja.elementos = dict(sorted(nodoHoja.elementos.items(), key=operator.itemgetter(1)))
+        cantDeRegistros = self.getCantidadDeElementos(nodoHoja)
         cantDeRegistros += 1
         self.setCantidadDeRegistrosPagina(nodoHoja, cantDeRegistros)
-        self.setRegistroEn(nodoHoja, posicionDelRegistroAAgregar, registroSerializadoConId)
 
     def obtenerPosicionDeRegistroAInsertar(self, nodoHoja, idRegistroAInsertar):
         return nodoHoja.posicionParaNuevoRegistro(idRegistroAInsertar)
@@ -124,11 +119,11 @@ class Tabla:
         self.paginador.obtenerPagina(numPagina)
         nodo = self.paginador.cache[numPagina]
         cantidadDeRegistrosTotal = 0
-        esNodoHoja = bool.from_bytes(nodo.tipoDeNodo)
+        esNodoHoja = (1 == self.getTipoNodo(nodo))
         if esNodoHoja:
-            cantidadDeRegistrosTotal += self.getCantidadDeRegistrosPagina(nodo)
+            cantidadDeRegistrosTotal += self.getCantidadDeElementos(nodo)
         else:
-            punteros = nodo.punteros
+            punteros = nodo.elementos
             punteroHijeDerecho = int.from_bytes(nodo.punteroAHijeDerecho, byteorder="big")
             for numPagina in punteros.keys():
                 cantidadDeRegistrosTotal += self.cantidadDeRegistrosGuardados(numPagina)
@@ -142,7 +137,7 @@ class Tabla:
         registros = self.obtenerTodosLosRegistros(1)
         registrosDeserializados = ""
         for registro in registros:
-            registro = registro[4:]
+            #registro = registro[4:]
             registroDeserializado = self.deserializar(registro)
             registrosDeserializados += registroDeserializado
             if registro[:4] != registros[-1][:4]:
@@ -153,11 +148,11 @@ class Tabla:
         self.paginador.obtenerPagina(numPagina)
         nodo = self.paginador.cache[numPagina]
         registros = []
-        esNodoHoja = bool.from_bytes(nodo.tipoDeNodo)
+        esNodoHoja = (1 == self.getTipoNodo(nodo))
         if esNodoHoja:
-            registros.extend(nodo.registros)
+            registros.extend(nodo.elementos.values())
         else:
-            punteros = nodo.punteros
+            punteros = nodo.elementos
             punteroHijeDerecho = int.from_bytes(nodo.punteroAHijeDerecho, byteorder="big")
             for numPagina in punteros.keys():
                 registros.extend(self.obtenerTodosLosRegistros(numPagina))
@@ -235,17 +230,14 @@ class Tabla:
         datosEnBytes = bytes[:posicionFinalDatos]
         return str(datosEnBytes, 'ascii')
     
-    def getTipoNodo(self, pagina):
-        tipoDeNodo = pagina[0:1]
-        return tipoDeNodo
+    def getTipoNodo(self, nodo):
+        return nodo.getTipoDeNodo()
     
     def getEsRaiz(self, nodo):
-        esRaiz = bool.from_bytes(nodo.esRaiz)
-        return esRaiz
+        return nodo.getEsRaiz()
     
-    def getPunteroAXadre(self, pagina):
-        punteroAXadre = pagina[2:6]
-        return punteroAXadre
+    def getPunteroAXadre(self, nodo):
+        return nodo.getPunteroAXadre()
     
     def setPunteroAXadre(self, nodoHoja, numPagina):
         punteroAXadreSerializado = numPagina.to_bytes(4, byteorder="big")
@@ -255,17 +247,16 @@ class Tabla:
         punteroAHijeDerechoSerializado = numPagina.to_bytes(4, byteorder="big")
         nodoInterno.punteroAHijeDerecho = punteroAHijeDerechoSerializado
     
-    def getCantidadDeRegistrosPagina(self, nodoHoja):
-        cantidadDeRegistros = int.from_bytes(nodoHoja.cantidadRegistros, byteorder="big")
-        return cantidadDeRegistros
+    def getCantidadDeElementos(self, nodo):
+        return nodo.getCantidadDeElementos()
 
     def setCantidadDeRegistrosPagina(self, nodoHoja, cantDeRegistrosActualizada):
         cantidadDeRegistrosSerializado = cantDeRegistrosActualizada.to_bytes(4, byteorder="big")
-        nodoHoja.cantidadRegistros = cantidadDeRegistrosSerializado
+        nodoHoja.cantidadDeElementos = cantidadDeRegistrosSerializado
 
     def setCantidadDeClaves(self, nodoInterno, cantDeClavesActualizada):
         cantidadDeClavesSerializada = cantDeClavesActualizada.to_bytes(4, byteorder="big")
-        nodoInterno.cantidadClaves = cantidadDeClavesSerializada
+        nodoInterno.cantidadDeElementos = cantidadDeClavesSerializada
 
     def setRegistroEn(self, nodoHoja, posicion, registro):
         nodoHoja.insertarRegistroEn(posicion, registro)

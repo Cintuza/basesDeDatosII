@@ -21,6 +21,12 @@ class NodoHoja(Nodo):
     
     def getCantidadDeElementos(self):
         return int.from_bytes(self.cantidadDeElementos, byteorder="big")
+    
+    def estaCompleto(self):
+        return self.getCantidadDeElementos() == 13
+
+    def dividirNodo(self, tabla, numPaginaNodo, idRegistro, registroSerializado):
+        tabla.dividirNodoHoja(numPaginaNodo, self, idRegistro, registroSerializado)
 
     def listarRegistros(self, registros):
         cantidadDeRegistros = self.getCantidadDeElementos()

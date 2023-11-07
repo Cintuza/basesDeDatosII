@@ -17,3 +17,11 @@ class Nodo(ABC):
     @abstractmethod
     def getCantidadDeElementos(self):
         pass
+    
+    @abstractmethod
+    def estaCompleto(self):
+        pass
+    
+    @abstractmethod
+    def dividirNodo(self, tabla, numPaginaNodo, idRegistro, registroSerializado):
+        pass

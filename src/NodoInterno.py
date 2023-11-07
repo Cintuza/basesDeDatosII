@@ -23,7 +23,7 @@ class NodoInterno(Nodo):
         return int.from_bytes(self.cantidadDeElementos, byteorder="big")
     
     def estaCompleto(self):
-        return self.getCantidadDeElementos() == 2
+        return self.getCantidadDeElementos() == 510
 
     def dividirNodo(self, tabla, numPaginaNodo, idRegistro, registroSerializado):
         tabla.dividirNodoInterno(numPaginaNodo, self, idRegistro, registroSerializado)

@@ -63,15 +63,12 @@ class Tabla:
         else:
             # primer nodo
             numPrimerNodo = numPaginaNodo
-            print(numPrimerNodo)
             primerNodo = self.paginador.cache[numPaginaNodo]
             # nodo xadre
             punteroAXadre = self.getPunteroAXadre(nodo)
-            print(punteroAXadre)
             nodoXadre = self.paginador.cache[punteroAXadre]    
         # segundo nodo
         numSegundoNodo = self.paginador.obtenerPagina(self.paginaNueva())
-        print(numSegundoNodo)
         segundoNodo = self.paginador.cache[numSegundoNodo]
         # se actualizan los registros y cantidad de reg en ambos nodos
         primerNodo.elementos = dict(list(registros)[:len(registros)//2])
@@ -144,7 +141,6 @@ class Tabla:
             nodoHije = self.paginador.cache[numPagina]
             self.setPunteroAXadre(nodoHije, numPrimerNodo)
             self.paginador.cache[numPagina] = nodoHije
-            print(nodoHije.punteroAXadre)
         ultimoNodoPrimerNodo = self.paginador.cache[ultimoElementoPrimerNodo[0][0]]
         self.setPunteroAXadre(ultimoNodoPrimerNodo, numPrimerNodo)
         self.paginador.cache[ultimoElementoPrimerNodo[0][0]] = ultimoNodoPrimerNodo
@@ -231,11 +227,7 @@ class Tabla:
             registros.extend(nodo.elementos.values())
         else:
             punteros = nodo.elementos
-            print(numPagina)
-            print('cantidad de punteros: ' + str(nodo.getCantidadDeElementos()))
-            print(punteros)
             punteroHijeDerecho = int.from_bytes(nodo.punteroAHijeDerecho, byteorder="big")
-            print('derecho: ' + str(punteroHijeDerecho))
             for numPagina in punteros.keys():
                 registros.extend(self.obtenerTodosLosRegistros(numPagina))
             registros.extend(self.obtenerTodosLosRegistros(punteroHijeDerecho))

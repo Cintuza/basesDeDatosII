@@ -34,7 +34,11 @@ class Tabla:
         nodoRaiz = self.paginador.cache[numPaginaRaiz]
         esNodoHoja = (1 == self.getTipoNodo(nodoRaiz))
         if esNodoHoja:
-            self.agregarRegistroAPagina(numPaginaRaiz, nodoRaiz, idRegistro, registroSerializado)
+            if idRegistro in nodoRaiz.elementos:
+                return "Inválido"
+            else:
+                self.agregarRegistroAPagina(numPaginaRaiz, nodoRaiz, idRegistro, registroSerializado)
+                return "INSERT exitoso"
         else:
             numPaginaAEscribir = None
             idRegistroDeserializado = int.from_bytes(registroSerializado[:4], byteorder = "big")
@@ -45,7 +49,7 @@ class Tabla:
             if numPaginaAEscribir == None:
                 punteroDerecho = int.from_bytes(nodoRaiz.punteroAHijeDerecho, byteorder = "big")
                 numPaginaAEscribir = punteroDerecho
-            self.guardarRegistroEnCache(registro, numPaginaAEscribir)
+            return self.guardarRegistroEnCache(registro, numPaginaAEscribir)
 
     def dividirNodoHoja(self, numPaginaNodo, nodo, idRegistro, registroSerializado):
         esRaiz = self.getEsRaiz(nodo)

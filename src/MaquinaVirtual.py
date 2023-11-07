@@ -34,8 +34,8 @@ class MaquinaVirtual:
 
     def insertarRegistro(self, registro):
         if self.registroEsValido(registro):
-            self.tabla.guardarRegistroEnCache(registro, 1)
-            print("INSERT exitoso")
+            resultado = self.tabla.guardarRegistroEnCache(registro, 1)
+            print(resultado)
         else:
             print("Operación inválida")
 

@@ -6,12 +6,6 @@ class Tabla:
 
     def __init__(self, paginador):
         self.paginador = paginador
-
-    def ultimaPaginaEscrita(self):
-        if len(self.paginador.cache) == 0:
-            return self.cantPaginasBaseDeDatos()
-        else:
-            return max(self.paginador.cache.keys())
     
     def paginaNueva(self):
         if len(self.paginador.cache) == 0:
@@ -22,10 +16,12 @@ class Tabla:
     
     def cantPaginasBaseDeDatos(self):
         tamanioBaseDatos = self.paginador.tamanioBaseDatos
-        if (tamanioBaseDatos % 4096 == 0):
-            return int(tamanioBaseDatos / 4096)
+        paginasEnArchivo = int(tamanioBaseDatos / 4096)
+        if len(self.paginador.cache) == 0:
+            return paginasEnArchivo
         else:
-            return int(tamanioBaseDatos / 4096) + 1
+            mayorPaginaEnCache = max(self.paginador.cache.keys())
+            return max(paginasEnArchivo, mayorPaginaEnCache)
         
     def guardarRegistroEnCache(self, registro, numPagina):
         registroSerializado = self.serializar(registro)
@@ -236,14 +232,6 @@ class Tabla:
                 registros.extend(self.obtenerTodosLosRegistros(numPagina))
             registros.extend(self.obtenerTodosLosRegistros(punteroHijeDerecho))
         return registros
-
-    def obtenerTodasLasPaginas(self):
-        paginas = []
-        for numPagina in range(1, self.ultimaPaginaEscrita() + 1):
-            posicionPagina = self.paginador.obtenerPagina(numPagina)
-            pagina = self.paginador.cache[posicionPagina]
-            paginas.append(pagina)
-        return paginas
         
     def serializar(self, registro):
         elementosDelRegistro = registro.split(" ")
@@ -338,13 +326,3 @@ class Tabla:
 
     def setRegistroEn(self, nodoHoja, posicion, registro):
         nodoHoja.insertarRegistroEn(posicion, registro)
-
-    # def getValorEn(self, pagina, posicion):
-    #     posicionEnPagina = 14 + posicion * 295
-    #     valor = pagina[posicionEnPagina:posicionEnPagina + 291]
-    #     return valor
-    
-    # def getClaveEn(self, pagina, posicion):
-    #     posicionEnPagina = 10 + posicion * 295
-    #     clave = pagina[posicionEnPagina:posicionEnPagina + 4]
-    #     return clave

@@ -98,10 +98,11 @@ class Tabla:
         segundoNodo.elementos = dict(list(registros)[len(registros)//2:])
         self.setCantidadDeElementosDeNodo(primerNodo, 7)
         self.setCantidadDeElementosDeNodo(segundoNodo, 7)
-        # se completa puntero a nodo xadre en el nodo nuevo
-        # agrego puntero de nodo nuevo en nodo xadre
-        # si el nodo original era hije derecho, este puntero se reemplaza con el segundo nodo
-        # caso contrario solo se agrega a la lista de nodos
+        # se actualiza el primer nodo
+        # si el primer nodo ya se encuentra en el nodo xadre, se actualiza el par clave puntero en nodo xadre
+        # si no se encuentra, se actualiza el primer nodo en la cache y luego se agrega el primer nodo
+        # al nodo xadre
+        # si agregar el primer nodo provoco la division del nodo xadre, se actualiza el valor del nodo xadre
         idUltimoRegistroDelPrimerNodo = list(primerNodo.elementos)[-1]
         punteroHijeDerecho = int.from_bytes(nodoXadre.punteroAHijeDerecho, byteorder="big")
         if numPrimerNodo in nodoXadre.elementos.keys():
@@ -113,6 +114,11 @@ class Tabla:
             punteroAXadreActualizado = self.getPunteroAXadre(primerNodo)
             if punteroAXadre != punteroAXadreActualizado:
                 nodoXadre = self.paginador.cache[punteroAXadreActualizado]
+        # se actualiza el segundo nodo para tres casos:
+        # - si el nodo xadre es raiz, se agrega como nodo hijo derecho
+        # - si el nodo hijo derecho del nodo xadre es el primer nodo, se reemplaza con el segundo nodo 
+        # y se agrega el primer nodo a la lista del nodo xadre
+        # - si no es ninguna de las anteriores, se agrega a la lista del nodo xadre
         if esRaiz:
             self.setPunteroAHijeDerecho(nodoXadre, numSegundoNodo)
             self.setPunteroAXadre(segundoNodo, punteroAXadre)
@@ -125,16 +131,8 @@ class Tabla:
             idUltimoRegistroDelSegundoNodo = list(segundoNodo.elementos)[-1]
             self.paginador.cache[numPrimerNodo] = primerNodo
             self.agregarElementoANodo(punteroAXadre, nodoXadre, numSegundoNodo, idUltimoRegistroDelSegundoNodo)
-        # actualizo puntero nodo anterior en nodo xadre; si ya se encuentra en la lista se reemplaza, 
-        # y si no se agrega de cero
-        # self.setPunteroAXadre(primerNodo, punteroAXadre)
-        # idUltimoRegistroDelNodoRaiz = list(primerNodo.elementos)[-1]
-        # self.agregarElementoANodo(punteroAXadre, nodoXadre, numPrimerNodo, idUltimoRegistroDelNodoRaiz)
-        # ordeno los punteros del nodo xadre
-        #nodoXadre.elementos = dict(sorted(nodoXadre.elementos.items(), key=operator.itemgetter(1)))
-        # actualizo los tres nodos en la cache del paginador
+        # se guardan el segundo nodo y el nodo xadre (el primero siempre queda guardado antes)
         self.paginador.cache[numSegundoNodo] = segundoNodo
-        # self.paginador.cache[numPrimerNodo] = primerNodo
         self.paginador.cache[punteroAXadre] = nodoXadre
 
     # split nodo interno
@@ -195,7 +193,11 @@ class Tabla:
         hijeDerechoSegundoNodo = self.paginador.cache[punteroAHijeDerecho]
         self.setPunteroAXadre(hijeDerechoSegundoNodo, numSegundoNodo)
         self.paginador.cache[punteroAHijeDerecho] = hijeDerechoSegundoNodo
-        # actualizacion primer nodo
+        # se actualiza el primer nodo
+        # si el primer nodo ya se encuentra en el nodo xadre, se actualiza el par clave puntero en nodo xadre
+        # si no se encuentra, se actualiza el primer nodo en la cache y luego se agrega el primer nodo
+        # al nodo xadre
+        # si agregar el primer nodo provoco la division del nodo xadre, se actualiza el valor del nodo xadre
         punteroHijeDerecho = int.from_bytes(nodoXadre.punteroAHijeDerecho, byteorder="big")
         if numPrimerNodo in nodoXadre.elementos.keys():
             nodoXadre.elementos[numPrimerNodo] = ultimoElementoPrimerNodo[0][1]
@@ -206,7 +208,11 @@ class Tabla:
             punteroAXadreActualizado = self.getPunteroAXadre(primerNodo)
             if punteroAXadre != punteroAXadreActualizado:
                 nodoXadre = self.paginador.cache[punteroAXadreActualizado]
-        # agrego puntero de nodo nuevo en nodo xadre
+        # se actualiza el segundo nodo para tres casos:
+        # - si el nodo xadre es raiz, se agrega como nodo hijo derecho
+        # - si el nodo hijo derecho del nodo xadre es el primer nodo, se reemplaza con el segundo nodo 
+        # y se agrega el primer nodo a la lista del nodo xadre
+        # - si no es ninguna de las anteriores, se agrega a la lista del nodo xadre
         punteroHijeDerecho = int.from_bytes(nodoXadre.punteroAHijeDerecho, byteorder="big")
         if esRaiz:
             self.setPunteroAHijeDerecho(nodoXadre, numSegundoNodo)
@@ -219,22 +225,8 @@ class Tabla:
         else:
             self.paginador.cache[numPrimerNodo] = primerNodo
             self.agregarElementoANodo(punteroAXadre, nodoXadre, numSegundoNodo, nodoXadre.elementos[numPrimerNodo])
-        # chequeo si cambio nodo xadre
-        # punteroAXadreActualizado = self.getPunteroAXadre(segundoNodo)
-        # if punteroAXadre != punteroAXadreActualizado:
-        #     nodoXadre.elementos = dict(sorted(nodoXadre.elementos.items(), key=operator.itemgetter(1)))
-        #     self.paginador.cache[punteroAXadre] = nodoXadre
-        #     punteroAXadre = punteroAXadreActualizado
-        #     self.paginador.obtenerPagina(punteroAXadreActualizado)
-        #     nodoXadre = self.paginador.cache[punteroAXadreActualizado]
-        # actualizo puntero nodo anterior en nodo xadre
-        # self.setPunteroAXadre(primerNodo, punteroAXadre)
-        # self.agregarElementoANodo(punteroAXadre, nodoXadre, numPrimerNodo, ultimoElementoPrimerNodo[0][1])
-        # ordeno los punteros del nodo xadre
-        # nodoXadre.elementos = dict(sorted(nodoXadre.elementos.items(), key=operator.itemgetter(1)))
-        # actualizo los tres nodos en la cache del paginador
+        # se guardan el segundo nodo y el nodo xadre (el primero siempre queda guardado antes)
         self.paginador.cache[numSegundoNodo] = segundoNodo
-        # self.paginador.cache[numPrimerNodo] = primerNodo
         self.paginador.cache[punteroAXadre] = nodoXadre
 
     def cantidadDeRegistrosGuardados(self, numPagina):
@@ -276,9 +268,6 @@ class Tabla:
         else:
             punteros = nodo.elementos
             punteroHijeDerecho = int.from_bytes(nodo.punteroAHijeDerecho, byteorder="big")
-            print("nodo: " + str(numPagina))
-            print(punteros)
-            print("hije derecho: " + str(punteroHijeDerecho))
             for numPagina in punteros.keys():
                 registros.extend(self.obtenerTodosLosRegistros(numPagina))
             registros.extend(self.obtenerTodosLosRegistros(punteroHijeDerecho))
